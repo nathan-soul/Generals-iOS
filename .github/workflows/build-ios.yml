@@ -1,0 +1,90 @@
+name: 🍎 Build Generals Zero Hour — iOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_assets:
+        description: 'Skip 2.7GB game assets (dev mode)'
+        type: boolean
+        default: true
+  push:
+    tags: ['v*']
+
+env:
+  VCPKG_ROOT: ${{ github.workspace }}/vcpkg
+  VULKAN_SDK: ${{ github.workspace }}/VulkanSDK/macOS
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Cache vcpkg
+        id: cache-vcpkg
+        uses: actions/cache@v4
+        with:
+          path: |
+            vcpkg
+            build/ios-vulkan/_deps
+          key: ${{ runner.os }}-vcpkg-${{ hashFiles('CMakePresets.json') }}
+
+      - name: Setup vcpkg
+        if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+        run: |
+          git clone --depth 1 https://github.com/microsoft/vcpkg $VCPKG_ROOT
+          $VCPKG_ROOT/bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Cache Vulkan SDK
+        id: cache-vulkan
+        uses: actions/cache@v4
+        with:
+          path: VulkanSDK
+          key: ${{ runner.os }}-vulkan-sdk
+
+      - name: Download Vulkan SDK
+        if: steps.cache-vulkan.outputs.cache-hit != 'true'
+        run: |
+          curl -sL https://sdk.lunarg.com/sdk/download/1.4.309.0/mac/vulkansdk-macos-1.4.309.0.zip \
+            -o /tmp/vulkan.zip
+          mkdir -p VulkanSDK
+          unzip -q /tmp/vulkan.zip -d VulkanSDK/
+          ls VulkanSDK/
+
+      - name: Install system deps
+        run: |
+          brew install cmake ninja meson pkgconf xcodegen
+
+      - name: Fetch MoltenVK
+        run: ./scripts/build/ios/fetch-moltenvk.sh
+
+      - name: Stage fonts
+        run: ./scripts/build/ios/stage-fonts.sh
+
+      - name: Configure CMake (iOS)
+        run: cmake --preset ios-vulkan
+
+      - name: Build engine
+        run: cmake --build build/ios-vulkan --target z_generals
+
+      - name: Package .app
+        run: |
+          if [[ "${{ github.event.inputs.skip_assets }}" == "true" ]]; then
+            FLAGS="--dev"
+          else
+            FLAGS=""
+          fi
+          GX_TEAM_ID="${{ secrets.GX_TEAM_ID }}" \
+          GX_BUNDLE_ID="${{ secrets.GX_BUNDLE_ID || 'com.you.generalszh' }}" \
+          ./scripts/build/ios/package-ios-zh.sh $FLAGS
+
+      - name: Upload .app artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: GeneralsZH-iOS-${{ github.sha }}
+          path: build/ios-vulkan/GeneralsMD/*.app
+          compression-level: 9

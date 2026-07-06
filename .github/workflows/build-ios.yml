@@ -1,14 +1,15 @@
 name: 🍎 Build Generals Zero Hour — iOS
 
 on:
+  push:
+    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       skip_assets:
         description: 'Skip 2.7GB game assets (dev mode)'
         type: boolean
         default: true
-  push:
-    tags: ['v*']
 
 env:
   VCPKG_ROOT: ${{ github.workspace }}/vcpkg

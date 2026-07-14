@@ -62,7 +62,7 @@ jobs:
 
       - name: Install system deps
         run: |
-          brew install cmake ninja meson pkgconf xcodegen
+          brew install cmake ninja meson pkgconf xcodegen glslang
 
       - name: Fetch MoltenVK
         run: |

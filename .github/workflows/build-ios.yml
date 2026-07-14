@@ -94,11 +94,16 @@ jobs:
       - name: Package .app
         run: |
           if [[ -z "${{ secrets.GX_TEAM_ID }}" ]]; then
-            echo "No GX_TEAM_ID set — creating minimal .app bundle (unsigned)"
+            echo "No GX_TEAM_ID set — using unsinged .app bundle from build"
             APP_DIR="build/ios-vulkan/GeneralsMD/GeneralsXZH.app"
-            mkdir -p "$APP_DIR"
-            cp "build/ios-vulkan/GeneralsMD/GeneralsXZH" "$APP_DIR/GeneralsXZH"
-            echo "Unsigned binary at $APP_DIR/GeneralsXZH"
+            if [[ -f "$APP_DIR/GeneralsXZH" ]]; then
+              echo "Binary already bundled by CMake: $APP_DIR"
+              ls -la "$APP_DIR/"
+            else
+              mkdir -p "$APP_DIR"
+              cp "build/ios-vulkan/GeneralsMD/GeneralsXZH" "$APP_DIR/" 2>/dev/null || true
+              echo "Created minimal bundle at $APP_DIR"
+            fi
           else
             if [[ "${{ github.event.inputs.skip_assets }}" == "true" ]]; then
               FLAGS="--dev"

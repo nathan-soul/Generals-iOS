@@ -65,7 +65,19 @@ jobs:
           brew install cmake ninja meson pkgconf xcodegen
 
       - name: Fetch MoltenVK
-        run: ./scripts/build/ios/fetch-moltenvk.sh
+        run: |
+          ./scripts/build/ios/fetch-moltenvk.sh
+          # Link iOS MoltenVK static lib to where CMake preset expects it
+          MVK_STATIC="$HOME/GeneralsX/MoltenVK/MoltenVK/MoltenVK/static/MoltenVK.xcframework/ios-arm64/libMoltenVK.a"
+          if [[ -f "$MVK_STATIC" ]]; then
+            mkdir -p "$VULKAN_SDK/lib/MoltenVK.xcframework/ios-arm64"
+            cp "$MVK_STATIC" "$VULKAN_SDK/lib/MoltenVK.xcframework/ios-arm64/libMoltenVK.a"
+            echo "Linked MoltenVK iOS static lib to VULKAN_SDK"
+          else
+            echo "ERROR: MoltenVK iOS static lib not found at $MVK_STATIC"
+            ls -la "$HOME/GeneralsX/MoltenVK/MoltenVK/MoltenVK/" || true
+            exit 1
+          fi
 
       - name: Stage fonts
         run: ./scripts/build/ios/stage-fonts.sh

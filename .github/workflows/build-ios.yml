@@ -60,6 +60,9 @@ jobs:
           unzip -q /tmp/vulkan.zip -d VulkanSDK/
           ls VulkanSDK/
 
+      - name: Select Xcode 16.2
+        run: sudo xcode-select -s /Applications/Xcode_16.2.app
+
       - name: Install system deps
         run: |
           brew install cmake ninja meson pkgconf xcodegen glslang

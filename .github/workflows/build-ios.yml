@@ -83,7 +83,7 @@ jobs:
         run: ./scripts/build/ios/stage-fonts.sh
 
       - name: Configure CMake (iOS)
-        run: cmake --preset ios-vulkan
+        run: cmake --preset ios-vulkan -DCMAKE_OSX_DEPLOYMENT_TARGET=17.0
 
       - name: Build engine
         run: cmake --build build/ios-vulkan --target z_generals

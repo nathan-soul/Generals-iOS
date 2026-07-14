@@ -91,18 +91,16 @@ jobs:
       - name: Build engine
         run: cmake --build build/ios-vulkan --target z_generals
 
-      - name: Package .app
+      - name: Package .app (unsigned)
         run: |
+          APP_DIR="build/ios-vulkan/GeneralsMD/GeneralsXZH.app"
           if [[ -z "${{ secrets.GX_TEAM_ID }}" ]]; then
-            echo "No GX_TEAM_ID set — using unsinged .app bundle from build"
-            APP_DIR="build/ios-vulkan/GeneralsMD/GeneralsXZH.app"
+            echo "Unsigned build — .app ready at $APP_DIR"
             if [[ -f "$APP_DIR/GeneralsXZH" ]]; then
-              echo "Binary already bundled by CMake: $APP_DIR"
-              ls -la "$APP_DIR/"
+              echo "Binary: $(ls -la "$APP_DIR/GeneralsXZH" | awk '{print $5}')"
             else
-              mkdir -p "$APP_DIR"
-              cp "build/ios-vulkan/GeneralsMD/GeneralsXZH" "$APP_DIR/" 2>/dev/null || true
-              echo "Created minimal bundle at $APP_DIR"
+              echo "ERROR: Binary not found"
+              exit 1
             fi
           else
             if [[ "${{ github.event.inputs.skip_assets }}" == "true" ]]; then
@@ -115,9 +113,10 @@ jobs:
             ./scripts/build/ios/package-ios-zh.sh $FLAGS
           fi
 
-      - name: Upload .app artifact
+      - name: Upload .ipa artifact
         uses: actions/upload-artifact@v4
         with:
           name: GeneralsZH-iOS-${{ github.sha }}
-          path: build/ios-vulkan/GeneralsMD/*.app
-          compression-level: 9
+          path: build/ios-vulkan/GeneralsZH-iOS.ipa
+          compression-level: 0
+          if-no-files-found: error

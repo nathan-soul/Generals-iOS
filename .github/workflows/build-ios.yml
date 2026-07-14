@@ -35,10 +35,14 @@ jobs:
           key: ${{ runner.os }}-vcpkg-${{ hashFiles('CMakePresets.json') }}
 
       - name: Setup vcpkg
-        if: steps.cache-vcpkg.outputs.cache-hit != 'true'
         run: |
-          git clone --depth 1 https://github.com/microsoft/vcpkg $VCPKG_ROOT
-          $VCPKG_ROOT/bootstrap-vcpkg.sh -disableMetrics
+          if [[ "${{ steps.cache-vcpkg.outputs.cache-hit }}" == "true" ]]; then
+            echo "Cache hit — ensuring vcpkg has full history for versioning"
+            git -C "$VCPKG_ROOT" fetch --unshallow 2>/dev/null || echo "Already full or fetch skipped"
+          else
+            git clone https://github.com/microsoft/vcpkg $VCPKG_ROOT
+            $VCPKG_ROOT/bootstrap-vcpkg.sh -disableMetrics
+          fi
 
       - name: Cache Vulkan SDK
         id: cache-vulkan

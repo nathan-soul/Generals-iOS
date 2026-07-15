@@ -93,12 +93,14 @@ jobs:
 
       - name: Package .ipa (unsigned — collect dylibs + frameworks)
         run: |
-          BUILD_DIR="build/ios-vulkan"
+          ROOT="${GITHUB_WORKSPACE}"
+          BUILD_DIR="${ROOT}/build/ios-vulkan"
           APP_DIR="${BUILD_DIR}/GeneralsMD/GeneralsXZH.app"
-          OUT_IPA="${BUILD_DIR}/GeneralsZH-iOS.ipa"
 
           if [[ ! -f "${APP_DIR}/GeneralsXZH" ]]; then
             echo "ERROR: Binary not found at ${APP_DIR}/GeneralsXZH"
+            ls -la "${APP_DIR}" 2>/dev/null || echo "dir doesn't exist"
+            ls -la "${BUILD_DIR}/GeneralsMD/" 2>/dev/null || echo "GeneralsMD/ doesn't exist"
             exit 1
           fi
           echo "Binary: $(ls -la "${APP_DIR}/GeneralsXZH" | awk '{print $5}')"
@@ -124,7 +126,7 @@ jobs:
             fi
           done
 
-          # Rename openal-soft to expected name
+          # Rename openal-soft to expected install name
           if [[ -f "${APP_DIR}/Frameworks/libopenal.1.24.2.dylib" ]]; then
             mv "${APP_DIR}/Frameworks/libopenal.1.24.2.dylib" "${APP_DIR}/Frameworks/libopenal.1.dylib"
             echo "  renamed openal to libopenal.1.dylib"
@@ -144,7 +146,7 @@ jobs:
           # Add rpath so dyld can find Frameworks/
           install_name_tool -add_rpath "@executable_path/Frameworks" "${APP_DIR}/GeneralsXZH" 2>/dev/null || true
 
-          # Bundle game assets (unless skip_assets=true)
+          # Bundle game assets (unless skip_assets=true in workflow_dispatch)
           if [[ "${{ github.event.inputs.skip_assets }}" != "true" ]]; then
             GAME_DATA_SRC="${GX_GAME_DATA:-${HOME}/GeneralsX/GeneralsZH}"
             if [[ -d "${GAME_DATA_SRC}" ]]; then
@@ -168,15 +170,17 @@ jobs:
             echo "  skip_assets=true — game assets not bundled"
           fi
 
-          # Create .ipa (zip Payload/)
+          # Create .ipa (zip Payload/ from the workspace root)
           echo "==> Creating .ipa"
-          cd "${BUILD_DIR}"
-          rm -f GeneralsZH-iOS.ipa
+          cd "${ROOT}"
+          rm -f "${BUILD_DIR}/GeneralsZH-iOS.ipa"
           mkdir -p Payload
           cp -R "${APP_DIR}" "Payload/"
-          zip -q -r --symlinks GeneralsZH-iOS.ipa Payload/
+          cd Payload
+          zip -q -r --symlinks "${BUILD_DIR}/GeneralsZH-iOS.ipa" GeneralsXZH.app
+          cd "${ROOT}"
           rm -rf Payload
-          echo "    .ipa created: $(ls -lh GeneralsZH-iOS.ipa | awk '{print $5}')"
+          echo "    .ipa created: $(ls -lh "${BUILD_DIR}/GeneralsZH-iOS.ipa" | awk '{print $5}')"
 
       - name: Upload .ipa artifact
         uses: actions/upload-artifact@v4
